@@ -1,0 +1,9 @@
+# .NET / Visual Studio junk
+[Bb]in/
+[Oo]bj/
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+NuGet.config.txt

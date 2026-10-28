@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/.angular/
+**/dist/
+**/.vs/
+**/.env
+**/.env.*
+!**/.env.example
+**/appsettings.Development.json
+**/*.csproj.user

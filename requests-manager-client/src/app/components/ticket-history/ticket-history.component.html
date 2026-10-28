@@ -1,0 +1,40 @@
+
+<div class="history-container">
+  <h3>היסטוריית שינויים — פנייה #{{ ticketId }}</h3>
+
+  <div *ngIf="loading" class="state-message">
+    טוען היסטוריית שינויים...
+  </div>
+
+  <div *ngIf="!loading && errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="!loading && !errorMessage && history.length === 0"
+       class="state-message">
+    לא נמצאו שינויים עבור פנייה זו.
+  </div>
+
+  <div *ngIf="!loading && !errorMessage && history.length > 0"
+       class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>סטטוס קודם</th>
+          <th>סטטוס חדש</th>
+          <th>שונה על ידי</th>
+          <th>תאריך ושעה</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let item of history">
+          <td>{{ translateStatus(item.previousStatus) }}</td>
+          <td>{{ translateStatus(item.newStatus) }}</td>
+          <td>{{ item.changedBy || '—' }}</td>
+          <td>{{ item.changedAt | date:'dd/MM/yyyy HH:mm' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

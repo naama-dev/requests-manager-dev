@@ -1,0 +1,407 @@
+<section class="tickets-page" dir="rtl">
+
+  <header class="page-header">
+    <div>
+      <span class="eyebrow">WORKSPACE / REQUESTS</span>
+      <h1>ניהול פניות</h1>
+      <p class="page-subtitle">כל הפניות הארגוניות במקום אחד</p>
+    </div>
+
+    <div class="header-icon" aria-hidden="true">▤</div>
+  </header>
+
+  <!-- סיכום נתונים: נשאר מוצג בזמן טעינה -->
+  <div *ngIf="response as result" class="summary-grid">
+
+    <article class="summary-card total-card">
+      <div class="summary-top">
+        <span class="summary-label">סה״כ פניות</span>
+        <span class="summary-icon">▤</span>
+      </div>
+      <div class="summary-value">{{ result.totalCount }}</div>
+      <div class="summary-foot">כל הפניות במערכת</div>
+    </article>
+
+    <article class="summary-card">
+      <div class="summary-top">
+        <span class="summary-label">פניות חדשות</span>
+        <span class="status-dot new-dot"></span>
+      </div>
+      <div class="summary-value">{{ result.statusCounts['New'] || 0 }}</div>
+      <div class="summary-foot">ממתינות לטיפול ראשוני</div>
+    </article>
+
+    <article class="summary-card">
+      <div class="summary-top">
+        <span class="summary-label">בטיפול</span>
+        <span class="status-dot progress-dot"></span>
+      </div>
+      <div class="summary-value">{{ result.statusCounts['InProgress'] || 0 }}</div>
+      <div class="summary-foot">פניות שנמצאות בטיפול</div>
+    </article>
+
+    <article class="summary-card">
+      <div class="summary-top">
+        <span class="summary-label">עדיפות גבוהה</span>
+        <span class="status-dot high-dot"></span>
+      </div>
+      <div class="summary-value">{{ result.priorityCounts['High'] || 0 }}</div>
+      <div class="summary-foot">דורשות תשומת לב</div>
+    </article>
+
+  </div>
+
+  <section class="content-card">
+
+    <div class="content-header">
+      <div>
+        <h2>רשימת הפניות</h2>
+        <p>הפניות שהתקבלו במערכת</p>
+      </div>
+
+      <span class="results-count">
+        {{ tickets.length }} תוצאות בעמוד
+      </span>
+    </div>
+
+    <!-- שדות הסינון נשארים זמינים גם בזמן טעינה -->
+    <div class="filters-panel" dir="rtl">
+
+      <div class="filters-header">
+        <div class="filters-title">
+          <span class="filter-icon">☷</span>
+          <div>
+            <h3>סינון וחיפוש פניות</h3>
+            <p>סנני את הפניות לפי הפרמטרים הרצויים</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="filters-grid">
+
+        <div class="filter-field search-field">
+          <label for="search">חיפוש חופשי</label>
+          <input id="search" type="text" [formControl]="searchControl" placeholder="חיפוש לפי כותרת או ארגון..." />
+        </div>
+
+        <div class="filter-field">
+          <label for="organizationName">שם הארגון</label>
+          <input id="organizationName" type="text" [formControl]="organizationNameControl"
+            placeholder="חיפוש לפי שם הארגון..." />
+        </div>
+
+        <div class="filter-field">
+          <label for="status">סטטוס</label>
+          <select id="status" [formControl]="statusControl">
+            <option value="">כל הסטטוסים</option>
+            <option value="Completed">הושלם</option>
+            <option value="InProgress">בטיפול</option>
+            <option value="New">חדש</option>
+            <option value="Waiting">ממתין</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="priority">עדיפות</label>
+          <select id="priority" [formControl]="priorityControl">
+            <option value="">כל העדיפויות</option>
+            <option value="Low">נמוכה</option>
+            <option value="Medium">בינונית</option>
+            <option value="High">גבוהה</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="assignedTo">אחראי</label>
+          <input id="assignedTo" type="text" [formControl]="assignedToControl" placeholder="שם האחראי..." />
+        </div>
+
+        <div class="filter-field">
+          <label for="fromDate">מתאריך</label>
+          <input id="fromDate" type="date" [formControl]="fromDateControl" />
+        </div>
+
+        <div class="filter-field">
+          <label for="toDate">עד תאריך</label>
+          <input id="toDate" type="date" [formControl]="toDateControl" />
+        </div>
+
+      </div>
+
+      <div class="filters-actions">
+        <button type="button" class="btn-clear" (click)="clearFilters()">
+          ניקוי שדות
+        </button>
+      </div>
+
+    </div>
+
+    <!-- הודעת טעינה: אינה מסתירה את הטופס או את התוצאות הקודמות -->
+    <div *ngIf="loading" class="loading-inline" role="status">
+      <span class="loader"></span>
+      <span>טוען פניות...</span>
+    </div>
+
+    <!-- שגיאה: הטופס נשאר זמין כדי לאפשר ניסיון חוזר -->
+    <div *ngIf="errorMessage && !loading" class="state-card error-card" role="alert">
+      <div>
+        <h3>לא הצלחנו לטעון את הפניות</h3>
+        <p>{{ errorMessage }}</p>
+      </div>
+
+      <button class="btn btn-primary" type="button" (click)="retry()">
+        נסה שוב
+      </button>
+    </div>
+
+    <!-- עדכון סטטוס מרוכז -->
+    <div class="bulk-update-panel" *ngIf="selectedTicketIds.size > 0">
+      <div class="bulk-update-info">
+        <strong>עדכון סטטוס מרוכז</strong>
+        <p class="bulk-update-hint">
+          סמני פניות בטבלה כדי לעדכן את הסטטוס שלהן יחד.
+          ניתן לבחור פניות מעמודים שונים.
+        </p>
+        <span>
+          נבחרו {{ selectedTicketIds.size }} פניות לעדכון
+        </span>
+      </div>
+
+      <div class="bulk-update-actions">
+        <label for="bulkStatus">סטטוס חדש:</label>
+
+        <select id="bulkStatus" [formControl]="bulkStatusControl" [disabled]="bulkUpdating">
+          <option value="New">חדש</option>
+          <option value="Waiting">ממתין</option>
+          <option value="InProgress">בטיפול</option>
+          <option value="Completed">הושלם</option>
+        </select>
+
+        <button type="button" class="btn btn-primary" (click)="bulkUpdateStatus()" [disabled]="
+        bulkUpdating ||
+        selectedTicketIds.size === 0
+      ">
+          {{ bulkUpdating ? 'מעדכן...' : 'עדכון הפניות שנבחרו' }}
+        </button>
+
+        <button type="button" class="btn btn-outline" (click)="clearSelection()"
+          [disabled]="bulkUpdating || selectedTicketIds.size === 0">
+          ביטול בחירה
+        </button>
+      </div>
+
+      <div *ngIf="bulkUpdateMessage" class="bulk-update-message" role="status">
+        <span>{{ bulkUpdateMessage }}</span>
+
+        <button type="button" (click)="bulkUpdateMessage = ''" aria-label="סגירת ההודעה">
+          ×
+        </button>
+      </div>
+
+
+    </div>
+    <div *ngIf="bulkUpdateResult" class="bulk-update-results" aria-live="polite">
+      <button type="button" class="close-message" aria-label="סגירת תוצאות" (click)="bulkUpdateResult = null">
+        ×
+      </button>
+      <div *ngFor="let item of bulkUpdateResult.results" class="bulk-result-item"
+        [class.bulk-result-success]="item.isSuccess" [class.bulk-result-error]="!item.isSuccess">
+        <strong>פנייה #{{ item.id }}:</strong>
+        {{ translateStatusMessage(item.message) }}
+      </div>
+    </div>
+    <!-- הטבלה נשארת על המסך בזמן טעינת בקשה חדשה -->
+    <div class="table-wrapper" *ngIf="tickets.length > 0 && !errorMessage">
+      <table>
+
+        <thead>
+          <tr>
+            <th>
+              <input type="checkbox" [checked]="first100Selected"
+                (change)="onSelectFirst100Change($any($event.target).checked)" [disabled]="bulkUpdating || loading"
+                aria-label="בחירת 100 הפניות הראשונות" title="בחירת 100 הפניות הראשונות" />
+            </th>
+
+            <th>מספר פנייה</th>
+
+            <th>
+              <button type="button" class="sort-header" (click)="sortByColumn('Title')">
+                כותרת
+                <span>{{ getSortIcon('Title') }}</span>
+              </button>
+            </th>
+
+            <th>
+              <button type="button" class="sort-header" (click)="sortByColumn('OrganizationName')">
+                ארגון
+                <span>{{ getSortIcon('OrganizationName') }}</span>
+              </button>
+            </th>
+
+            <th>
+              <button type="button" class="sort-header" (click)="sortByColumn('Status')">
+                סטטוס
+                <span>{{ getSortIcon('Status') }}</span>
+              </button>
+            </th>
+
+            <th>
+              <button type="button" class="sort-header" (click)="sortByColumn('Priority')">
+                עדיפות
+                <span>{{ getSortIcon('Priority') }}</span>
+              </button>
+            </th>
+
+            <th>
+              <button type="button" class="sort-header" (click)="sortByColumn('AssignedTo')">
+                מטפל
+                <span>{{ getSortIcon('AssignedTo') }}</span>
+              </button>
+            </th>
+
+            <th>
+              <button type="button" class="sort-header" (click)="sortByColumn('CreatedAt')">
+                תאריך יצירה
+                <span>{{ getSortIcon('CreatedAt') }}</span>
+              </button>
+            </th>
+
+            <th>היסטוריה</th>
+          </tr>
+        </thead>
+
+
+
+        <tbody>
+          <ng-container *ngFor="let ticket of tickets">
+
+            <tr>
+              <td>
+                <input type="checkbox" [checked]="isTicketSelected(ticket.id)"
+                  (change)="toggleTicketSelection(ticket, $any($event.target).checked)" [disabled]="bulkUpdating"
+                  [attr.aria-label]="'בחירת פנייה ' + ticket.id" />
+              </td>
+
+              <td><span class="ticket-id">#{{ ticket.id }}</span></td>
+
+              <td class="title-cell">{{ ticket.title }}</td>
+
+              <td>{{ ticket.organizationName }}</td>
+
+
+              <td>
+                <div class="status-update-cell">
+                  <select [value]="getSelectedStatus(ticket.id, ticket.status)"
+                    (change)="onStatusSelectionChange(ticket.id, $any($event.target).value)"
+                    [disabled]="isUpdating(ticket.id)" [attr.aria-label]="'בחירת סטטוס לפנייה ' + ticket.id">
+
+                    <option value="New">חדש</option>
+                    <option value="Waiting">ממתין</option>
+                    <option value="InProgress">בטיפול</option>
+                    <option value="Completed">הושלם</option>
+                  </select>
+
+                  <button type="button" class="btn btn-primary" (click)="saveStatus(ticket)" [disabled]="isUpdating(ticket.id) ||
+        getSelectedStatus(ticket.id, ticket.status) === ticket.status">
+
+                    {{ isUpdating(ticket.id) ? 'שומר...' : 'שמור' }}
+                  </button>
+                </div>
+
+                <div *ngIf="statusMessages[ticket.id]" class="status-message" role="status">
+
+                  <span>{{ statusMessages[ticket.id] }}</span>
+
+                  <button type="button" (click)="clearStatusMessage(ticket.id)" aria-label="סגירת ההודעה">
+                    ×
+                  </button>
+                </div>
+              </td>
+
+
+              <td>
+                <span class="priority-badge" [ngClass]="'priority-' + ticket.priority">
+                  {{
+                  ticket.priority === 'High' ? 'גבוהה' :
+                  ticket.priority === 'Medium' ? 'בינונית' :
+                  ticket.priority === 'Low' ? 'נמוכה' :
+                  ticket.priority
+                  }}
+                </span>
+              </td>
+
+              <td>{{ ticket.assignedTo || 'לא הוקצה' }}</td>
+
+              <td class="date-cell">
+                {{ ticket.createdAt | date:'dd/MM/yyyy HH:mm' }}
+              </td>
+
+              <td>
+                <button type="button" class="btn btn-outline history-button" (click)="toggleTicketHistory(ticket.id)"
+                  [attr.aria-expanded]="expandedHistoryTicketId === ticket.id">
+                  {{ expandedHistoryTicketId === ticket.id ? 'סגירת היסטוריה' : 'היסטוריה' }}
+                </button>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- חלון היסטוריית הפנייה -->
+    <div *ngIf="expandedHistoryTicketId !== null" class="history-modal-overlay"
+      (click)="toggleTicketHistory(expandedHistoryTicketId)"
+      (keydown.escape)="toggleTicketHistory(expandedHistoryTicketId)">
+
+      <section class="history-modal" role="dialog" aria-modal="true" aria-labelledby="history-modal-title"
+        (click)="$event.stopPropagation()">
+
+        <header class="history-modal-header">
+          <div class="history-modal-title">
+            <span class="history-modal-icon">◷</span>
+            <h2 id="history-modal-title">
+              היסטוריית שינויים — פנייה #{{ expandedHistoryTicketId }}
+            </h2>
+          </div>
+
+          <button type="button" class="history-modal-close" aria-label="סגירת חלון ההיסטוריה"
+            (click)="toggleTicketHistory(expandedHistoryTicketId)">
+          </button>
+        </header>
+
+        <div class="history-modal-body">
+          <app-ticket-history [ticketId]="expandedHistoryTicketId">
+          </app-ticket-history>
+        </div>
+
+      </section>
+    </div>
+
+    <!-- מצב ריק מוצג רק כשהטעינה הסתיימה בהצלחה -->
+    <div *ngIf="!loading && !errorMessage && tickets.length === 0" class="empty-state">
+      <div class="empty-icon">⌕</div>
+      <h3>לא נמצאו פניות</h3>
+      <p>לא נמצאו פניות התואמות לחיפוש או לסינון שבחרת.</p>
+    </div>
+
+    <!-- דפדוף -->
+    <footer class="pagination" *ngIf="response as result">
+      <span class="page-info">
+        עמוד <strong>{{ query.page }}</strong>
+        מתוך <strong>{{ result.totalPages }}</strong>
+      </span>
+
+      <div class="pagination-actions">
+        <button class="btn btn-outline" type="button" (click)="previousPage()" [disabled]="loading || query.page <= 1">
+          ← הקודם
+        </button>
+
+        <button class="btn btn-primary" type="button" (click)="nextPage()"
+          [disabled]="loading || query.page >= result.totalPages">
+          הבא →
+        </button>
+      </div>
+    </footer>
+
+  </section>
+</section>
